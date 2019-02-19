@@ -60,11 +60,33 @@ Mengambil informasi details suatu job. Fungsi ini akan mengembalikan objek denga
 bentuk seperti berikut:
 
 ```
-$result = (object)[
-    'router' => [$routeName, $routeParams, $routeQuery],
-    'data'   => $data,
-    'time'   => $execution_time
-];
+stdClass Object
+(
+    [id] => 5
+    [name] => my-job
+    [router] => Array
+        (
+            [0] => siteHome
+            [1] => stdClass Object
+                (
+                    [param1] => 12
+                )
+
+            [2] => stdClass Object
+                (
+                    [query1] => 12
+                )
+
+        )
+
+    [data] => stdClass Object
+        (
+            [name] => lorem
+        )
+
+    [time] => 2019-02-19 13:58:18
+    [created] => 2019-02-19 05:58:18
+)
 ```
 
 ### exists(string $name): ?bool
