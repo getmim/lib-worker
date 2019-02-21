@@ -1,7 +1,6 @@
 # lib-worker
 
-Library untuk memenej job worker. Perlu juga memasang module `cli-app-worker` yang
-akan mengerjakan semua job yang sudah terdaftar.
+Library yang bertugas menjalankan aksi-aksi aplikasi di background.
 
 ## Instalasi
 
@@ -31,7 +30,7 @@ Semua aktifitas worker dijalankan melalui cli, untuk itu perlu menambahkan konte
 seperti di bawah pada cronjob anda:
 
 ```cron
-* * * * * cd /path/to/app/dir/ && php index.php app worker start
+* * * * * cd /path/to/app/dir/ && php index.php worker start
 ```
 
 Atau jika cli mim terpasang, bisa juga dengan perintah:
@@ -96,3 +95,42 @@ Fungsi untuk mengecek jika suatu job sudah terdaftar.
 ### remove(string $name): ?bool
 
 Menghapus job yang sudah terdaftar.
+
+## Konfigurasi
+
+Di bawah ini adalah konfigurasi umum worker.
+
+```php
+return [
+    // ...
+    'libWorker' => [
+        'concurency' => 10,
+        'phpBinary' => 'php'
+    ]
+    // ...
+];
+```
+
+1. `concurency` Total worker yang akan dijalankan untuk mengerjakan job.
+1. `phpBinary` Path ke php-cli jika php tidak tersedia di PATH OS.
+
+Jika melakukan perubahan pada aplikasi setelah worker berjalan, maka pastikan untuk merestart worker
+agar konfig tersebut digunakan.
+
+## Handler Response
+
+Masing-masing router yang akan digunakan untuk menangani worker, harus mengembalikan data dengan bentuk JSON
+dalam bentuk seperti di bawah:
+
+```json
+{
+    "error": false | true,
+    "data": "mixed"
+}
+```
+
+Worker akan dipending dan dijalankan ulang jika router pekerja:
+
+1. Mengembalikan *empty string*
+1. Mengembalikan data yang tidak bisa di `json_decode`.
+1. Nilai `error` adalah `true`.
