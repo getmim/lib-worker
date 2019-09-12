@@ -100,7 +100,7 @@ class WorkerController extends \Cli\Controller
         if($time > time())
             return;
 
-        $router = json_decode($job->router);
+        $router = json_decode($job->router, true);
 
         if(!$this->router->exists($router[0])){
             WJob::remove(['id'=>$id]);
