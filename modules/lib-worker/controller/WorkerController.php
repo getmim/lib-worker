@@ -121,6 +121,7 @@ class WorkerController extends \Cli\Controller
         $result = null;
 
         if($type === 'curl'){
+            $retry = WResult::count(['name' => $job->name]);
             $result = Curl::fetch([
                 'url'     => $target,
                 'method'  => 'POST',
@@ -128,7 +129,8 @@ class WorkerController extends \Cli\Controller
                 'agent'   => 'Mim Worker',
                 'headers' => [
                     'Accept'        => 'application/json',
-                    'Content-Type'  => 'application/json'
+                    'Content-Type'  => 'application/json',
+                    'X-Retry'       => $retry
                 ]
             ]);
         }else{
@@ -217,7 +219,7 @@ class WorkerController extends \Cli\Controller
             }
             
             $this->scanChildProcess();
-            sleep(1);
+            sleep(2);
 
             Bash::echo(date('Y-m-d H:i:s') . ' | Next Loop');
         }
