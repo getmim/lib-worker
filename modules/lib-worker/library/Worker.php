@@ -15,6 +15,23 @@ use LibWorker\Model\{
 class Worker
 {
 
+    static public function addMany(array $data): bool{
+        $rows = [];
+        foreach($data as $datum){
+            $rows[] = [
+                'name'   => $datum['name'],
+                'router' => json_encode($datum['router']),
+                'data'   => json_encode($datum['data']),
+                'time'   => date('Y-m-d H:i:s', $datum['time'])
+            ];
+        }
+
+        if(!$rows)
+            return false;
+
+        return WJob::createMany($rows, true);
+    }
+
     static public function add(string $name, array $router, array $data, int $time): bool {
         if(self::exists($name))
             return false;
