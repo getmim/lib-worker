@@ -143,7 +143,7 @@ class WorkerController extends \Cli\Controller
             $result = json_decode($result);
 
         if(!$result){
-            WJob::set(['time'=>date('Y-m-d H:i:s', strtotime('+2 minutes'))], ['id'=>$job->id]);
+            WJob::set(['time'=>date('Y-m-d H:i:s', strtotime('+1 minutes'))], ['id'=>$job->id]);
             return WResult::create([
                 'name'   => $job->name,
                 'source' => json_encode($job),
@@ -152,7 +152,11 @@ class WorkerController extends \Cli\Controller
         }
 
         if($result->error){
-            WJob::set(['time'=>date('Y-m-d H:i:s', strtotime('+2 minutes'))], ['id'=>$job->id]);
+            $delay = 60 * 2;
+            if(isset($result->delay))
+                $delay = $result->delay;
+            $next = time() + $delay;
+            WJob::set(['time'=>date('Y-m-d H:i:s', $next)], ['id'=>$job->id]);
             return WResult::create([
                 'name'   => $job->name,
                 'source' => json_encode($job),
