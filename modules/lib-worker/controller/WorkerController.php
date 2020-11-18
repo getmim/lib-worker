@@ -59,7 +59,7 @@ class WorkerController extends \Cli\Controller
         if(!posix_getpgid($pid))
             return false;
 
-        $pwd = trim(preg_replace('!^[0-9]+: !', '', `pwdx $pid`));
+        $pwd = trim(preg_replace('!^[0-9]+: !', '', `lsof -a -p $pid -d cwd -n | tail -1 | awk '{print \$NF}'`));
         return $pwd === BASEPATH;
     }
 
@@ -137,6 +137,9 @@ class WorkerController extends \Cli\Controller
             $php_binary = $this->config->libWorker->phpBinary;
             $target = 'cd ' . BASEPATH . ' && ' . $php_binary . ' index.php ' . $target;
             $result = `$target`;
+            $lines  = explode(PHP_EOL, trim($result));
+            $line   = end($lines);
+            $result = $line;
         }
 
         if(!is_object($result))
