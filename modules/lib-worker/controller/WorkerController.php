@@ -2,7 +2,7 @@
 /**
  * WorkerController
  * @package lib-model
- * @version 0.0.1
+ * @version 0.3.0
  */
 
 namespace LibWorker\Controller;
@@ -54,13 +54,24 @@ class WorkerController extends \Cli\Controller
         $pid_file = $this->getPIDFile();
         if(!is_file($pid_file))
             return false;
-        
+
         $pid = file_get_contents($pid_file);
         if(!posix_getpgid($pid))
             return false;
 
         $pwd = trim(preg_replace('!^[0-9]+: !', '', `lsof -a -p $pid -d cwd -n | tail -1 | awk '{print \$NF}'`));
         return $pwd === BASEPATH;
+    }
+
+    private function saveResult(string $name, string $source, string $result) {
+        if(!\Mim::$app->config->libWorker->keepResponse)
+            return;
+
+        WResult::create([
+            'name'   => $name,
+            'source' => $source,
+            'result' => $result
+        ]);
     }
 
     private function scanChildProcess(): void{
@@ -104,11 +115,11 @@ class WorkerController extends \Cli\Controller
 
         if(!$this->router->exists($router[0])){
             WJob::remove(['id'=>$id]);
-            return WResult::create([
-                'name'   => $job->name,
-                'source' => json_encode($job),
-                'result' => json_encode('__router_not_found__')
-            ]);
+            return self::saveResult(
+                $job->name,
+                json_encode($job),
+                json_encode('__router_not_found__')
+            );
         }
 
         $target = call_user_func_array([$this->router, 'to'], $router);
@@ -147,11 +158,7 @@ class WorkerController extends \Cli\Controller
 
         if(!$result){
             WJob::set(['time'=>date('Y-m-d H:i:s', strtotime('+1 minutes'))], ['id'=>$job->id]);
-            return WResult::create([
-                'name'   => $job->name,
-                'source' => json_encode($job),
-                'result' => json_encode('')
-            ]);
+            return self::saveResult($job->name, json_encode($job), json_encode(''));
         }
 
         if($result->error){
@@ -160,19 +167,11 @@ class WorkerController extends \Cli\Controller
                 $delay = $result->delay;
             $next = time() + $delay;
             WJob::set(['time'=>date('Y-m-d H:i:s', $next)], ['id'=>$job->id]);
-            return WResult::create([
-                'name'   => $job->name,
-                'source' => json_encode($job),
-                'result' => json_encode($result)
-            ]);
+            return self::saveResult($job->name, json_encode($job), json_encode($result));
         }
 
         WJob::remove(['id'=>$job->id]);
-        WResult::create([
-            'name'   => $job->name,
-            'source' => json_encode($job),
-            'result' => json_encode($result)
-        ]);
+        self::saveResult($job->name, json_encode($job), json_encode($result));
     }
 
     public function startAction(){
@@ -224,7 +223,7 @@ class WorkerController extends \Cli\Controller
                     Bash::echo(date('Y-m-d H:i:s') . ' | Running Job ' . $job->id);
                 }
             }
-            
+
             $this->scanChildProcess();
             sleep(2);
 

@@ -2,7 +2,7 @@
 
 return [
     '__name' => 'lib-worker',
-    '__version' => '0.2.1',
+    '__version' => '0.3.0',
     '__git' => 'git@github.com:getmim/lib-worker.git',
     '__license' => 'MIT',
     '__author' => [
@@ -109,6 +109,7 @@ return [
     'libWorker' => [
         'concurency' => 5,
         'pidFile' => 'etc',
-        'phpBinary' => 'php'
+        'phpBinary' => 'php',
+        'keepResponse' => true
     ]
 ];

@@ -41,6 +41,19 @@ Atau jika cli mim terpasang, bisa juga dengan perintah:
 
 ## Method
 
+### addMany(array $data): bool
+
+Menambah beberapa worker sekaligus. Fungsi ini akan melewati data yang sudah
+ada di databse. Masing-masing array item harus memiliki properti yang sama persis
+dengan data pada method `add`:
+
+```php
+$data = [
+    [ 'name' => 'x', 'router' => ['x', []], 'data' => [], 'time' => [] ],
+    ...
+];
+```
+
 ### add(string $name, array $router, array $data, int $time): ?bool
 
 Menambahkan satu worker dengan parameter sebagai berikut:
@@ -105,7 +118,8 @@ return [
     // ...
     'libWorker' => [
         'concurency' => 10,
-        'phpBinary' => 'php'
+        'phpBinary' => 'php',
+        'keepResponse' => true
     ]
     // ...
 ];
@@ -113,6 +127,7 @@ return [
 
 1. `concurency` Total worker yang akan dijalankan untuk mengerjakan job.
 1. `phpBinary` Path ke php-cli jika php tidak tersedia di PATH OS.
+1. `keepResponse` Menyimpan semua execution log pada table `worker_result`.
 
 Jika melakukan perubahan pada aplikasi setelah worker berjalan, maka pastikan untuk merestart worker
 agar konfig tersebut digunakan.
@@ -124,8 +139,9 @@ dalam bentuk seperti di bawah:
 
 ```json
 {
-    "error": false | true,
-    "data": "mixed"
+    "error": false,
+    "data": "mixed",
+    "delay": 60
 }
 ```
 
@@ -134,3 +150,7 @@ Worker akan dipending dan dijalankan ulang jika router pekerja:
 1. Mengembalikan *empty string*
 1. Mengembalikan data yang tidak bisa di `json_decode`.
 1. Nilai `error` adalah `true`.
+
+Jika nilai yang dikembalikan oleh pekerja adalah `error: true`, maka job tersebut akan dijalankan lagi
+1 menit kemudian. Pekerja bisa menentukan delay job akan dijalankan lagi dengan mengeset properti `delay`
+dalam satuan detik.

@@ -2,15 +2,12 @@
 /**
  * Worker
  * @package lib-worker
- * @version 0.0.1
+ * @version 0.3.0
  */
 
 namespace LibWorker\Library;
 
-use LibWorker\Model\{
-    WorkerJob as WJob,
-    WorkerResult as WResult
-};
+use LibWorker\Model\WorkerJob as WJob;
 
 class Worker
 {
