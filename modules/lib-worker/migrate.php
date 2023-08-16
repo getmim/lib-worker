@@ -14,7 +14,7 @@ return [
             ],
             'name' => [
                 'type' => 'VARCHAR',
-                'length' => 50,
+                'length' => 150,
                 'attrs' => [
                     'null' => false
                 ],
