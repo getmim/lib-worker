@@ -23,49 +23,61 @@ class WorkerController extends \Cli\Controller
     private $stopper_file;
     private $workers = [];
 
-    private function getPIDFile(): string{
-        if($this->pid_file)
+    private function getPIDFile(): string
+    {
+        if ($this->pid_file) {
             return $this->pid_file;
+        }
 
         $pid_file = $this->config->libWorker->pidFile;
-        if(substr($pid_file,0,1) != '/')
-            $pid_file = realpath( BASEPATH . '/' . $pid_file );
+        if (substr($pid_file, 0, 1) != '/') {
+            $pid_file = realpath(BASEPATH . '/' . $pid_file);
+        }
 
         $pid_file.= '/.worker';
 
         return ( $this->pid_file = $pid_file );
     }
 
-    private function getPID(): ?string{
-        if(!$this->isWorking())
+    private function getPID(): ?string
+    {
+        if (!$this->isWorking()) {
             return null;
+        }
         $pid_file = $this->getPIDFile();
         return file_get_contents($pid_file);
     }
 
-    private function getStopperFile(): string{
-        if($this->stopper_file)
+    private function getStopperFile(): string
+    {
+        if ($this->stopper_file) {
             return $this->stopper_file;
+        }
 
         return $this->stopper_file = dirname($this->getPIDFile()) . '/.wstopper';
     }
 
-    private function isWorking(): bool{
+    private function isWorking(): bool
+    {
         $pid_file = $this->getPIDFile();
-        if(!is_file($pid_file))
+        if (!is_file($pid_file)) {
             return false;
+        }
 
         $pid = file_get_contents($pid_file);
-        if(!posix_getpgid($pid))
+        if (!posix_getpgid($pid)) {
             return false;
+        }
 
         $pwd = trim(preg_replace('!^[0-9]+: !', '', `lsof -a -p $pid -d cwd -n | tail -1 | awk '{print \$NF}'`));
         return $pwd === BASEPATH;
     }
 
-    private function saveResult(string $name, string $source, string $result) {
-        if(!\Mim::$app->config->libWorker->keepResponse)
+    private function saveResult(string $name, string $source, string $result)
+    {
+        if (!\Mim::$app->config->libWorker->keepResponse) {
             return;
+        }
 
         WResult::create([
             'name'   => $name,
@@ -74,46 +86,56 @@ class WorkerController extends \Cli\Controller
         ]);
     }
 
-    private function scanChildProcess(): void{
-        foreach($this->workers as $job => $res){
+    private function scanChildProcess(): void
+    {
+        foreach ($this->workers as $job => $res) {
             $stat = proc_get_status($res);
-            if($stat['running'])
+            if ($stat['running']) {
                 continue;
+            }
             unset($this->workers[$job]);
             Bash::echo(' - Job ' . $job . ' Done');
             break;
         }
     }
 
-    public function onShutdown(){
+    public function onShutdown()
+    {
         $pid_file = $this->getPIDFile();
-        if(is_file($pid_file))
+        if (is_file($pid_file)) {
             unlink($pid_file);
+        }
         $stopper_file = $this->getStopperFile();
-        if(is_file($stopper_file))
+        if (is_file($stopper_file)) {
             unlink($stopper_file);
+        }
         exit;
     }
 
-    public function pidAction(){
-        if(!($pid = $this->getPID()))
+    public function pidAction()
+    {
+        if (!($pid = $this->getPID())) {
             return Bash::echo('Stopped');
+        }
         Bash::echo('PID: ' . $pid);
     }
 
-    public function runAction(){
+    public function runAction()
+    {
         $id = $this->req->param->id;
         $job = WJob::getOne(['id'=>$id]);
-        if(!$job)
+        if (!$job) {
             return;
+        }
 
         $time = strtotime($job->time);
-        if($time > time())
+        if ($time > time()) {
             return;
+        }
 
         $router = json_decode($job->router, true);
 
-        if(!$this->router->exists($router[0])){
+        if (!$this->router->exists($router[0])) {
             WJob::remove(['id'=>$id]);
             return self::saveResult(
                 $job->name,
@@ -131,7 +153,7 @@ class WorkerController extends \Cli\Controller
 
         $result = null;
 
-        if($type === 'curl'){
+        if ($type === 'curl') {
             $retry = WResult::count(['name' => $job->name]);
             $result = Curl::fetch([
                 'url'     => $target,
@@ -144,7 +166,7 @@ class WorkerController extends \Cli\Controller
                     'X-Retry'       => $retry
                 ]
             ]);
-        }else{
+        } else {
             $php_binary = $this->config->libWorker->phpBinary;
             $target = 'cd ' . BASEPATH . ' && ' . $php_binary . ' index.php ' . $target;
             $result = `$target`;
@@ -153,18 +175,20 @@ class WorkerController extends \Cli\Controller
             $result = $line;
         }
 
-        if(!is_object($result))
+        if (!is_object($result)) {
             $result = json_decode($result);
+        }
 
-        if(!$result){
+        if (!$result) {
             WJob::set(['time'=>date('Y-m-d H:i:s', strtotime('+1 minutes'))], ['id'=>$job->id]);
             return self::saveResult($job->name, json_encode($job), json_encode(''));
         }
 
-        if($result->error){
+        if ($result->error) {
             $delay = 60 * 2;
-            if(isset($result->delay))
+            if (isset($result->delay)) {
                 $delay = $result->delay;
+            }
             $next = time() + $delay;
             WJob::set(['time'=>date('Y-m-d H:i:s', $next)], ['id'=>$job->id]);
             return self::saveResult($job->name, json_encode($job), json_encode($result));
@@ -174,13 +198,15 @@ class WorkerController extends \Cli\Controller
         self::saveResult($job->name, json_encode($job), json_encode($result));
     }
 
-    public function startAction(){
-        if($this->isWorking())
+    public function startAction()
+    {
+        if ($this->isWorking()) {
             return Bash::echo('Started');
+        }
 
         // clean stuff on exit
         pcntl_signal(SIGTERM, [$this, 'onShutdown']);
-        pcntl_signal(SIGINT,  [$this, 'onShutdown']);
+        pcntl_signal(SIGINT, [$this, 'onShutdown']);
         register_shutdown_function([$this, 'onShutdown']);
 
         Fs::write($this->getPIDFile(), getmypid());
@@ -188,25 +214,29 @@ class WorkerController extends \Cli\Controller
         $php_binary = $this->config->libWorker->phpBinary;
         $max_worker = (int)$this->config->libWorker->concurency;
 
-        while(true){
-            if(is_file($this->getStopperFile()))
+        while (true) {
+            if (is_file($this->getStopperFile())) {
                 break;
+            }
 
             $jobs = WJob::get(['time' => ['__op', '<', date('Y-m-d H:i:s')]], 25);
 
             // sleep more
-            if($jobs){
+            if ($jobs) {
                 Bash::echo(date('Y-m-d H:i:s') . ' | Running The Jobs');
-                foreach($jobs as $job){
-                    if(isset($this->workers[$job->id]))
+                foreach ($jobs as $job) {
+                    if (isset($this->workers[$job->id])) {
                         continue;
-                    if(is_file($this->getStopperFile()))
+                    }
+                    if (is_file($this->getStopperFile())) {
                         break 2;
+                    }
 
-                    while($max_worker <= count($this->workers)){
+                    while ($max_worker <= count($this->workers)) {
                         Bash::echo(date('Y-m-d H:i:s') . ' | Wait For Child Process Slot');
-                        if(is_file($this->getStopperFile()))
+                        if (is_file($this->getStopperFile())) {
                             break 3;
+                        }
                         $this->scanChildProcess();
                         sleep(1);
                     }
@@ -231,29 +261,34 @@ class WorkerController extends \Cli\Controller
         }
 
         Bash::echo(date('Y-m-d H:i:s') . ' | Stopping...');
-        while(count($this->workers)){
+        while (count($this->workers)) {
             $this->scanChildProcess();
             sleep(1);
         }
     }
 
-    public function statusAction(){
+    public function statusAction()
+    {
         Bash::echo($this->isWorking() ? 'Started' : 'Stopped');
     }
 
-    public function stopAction(){
-        if(!$this->isWorking())
+    public function stopAction()
+    {
+        if (!$this->isWorking()) {
             return Bash::echo('Stopped');
+        }
 
         $stopper_file = $this->getStopperFile();
-        if(is_file($stopper_file))
+        if (is_file($stopper_file)) {
             return Bash::echo('Other stopper is running');
+        }
 
         touch($stopper_file);
 
         $pid = $this->getPID();
-        while(posix_getpgid($pid))
+        while (posix_getpgid($pid)) {
             sleep(1);
+        }
 
         Bash::echo('Stopped');
     }
