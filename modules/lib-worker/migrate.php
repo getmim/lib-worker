@@ -70,17 +70,25 @@ return [
                 ],
                 'index' => 100
             ],
+            'queue' => [
+                'type' => 'VARCHAR',
+                'length' => 150,
+                'attrs' => [
+                    'null' => true
+                ],
+                'index' => 110
+            ],
             'router' => [
                 'type' => 'TEXT',
                 'attrs' => [
-                    'null' => false 
+                    'null' => false
                 ],
                 'index' => 200
             ],
             'data' => [
                 'type' => 'TEXT',
                 'attrs' => [
-                    'null' => false 
+                    'null' => false
                 ],
                 'index' => 300
             ],

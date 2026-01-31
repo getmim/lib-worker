@@ -2,7 +2,7 @@
 
 return [
     '__name' => 'lib-worker',
-    '__version' => '0.6.0',
+    '__version' => '1.0.0',
     '__git' => 'git@github.com:getmim/lib-worker.git',
     '__license' => 'MIT',
     '__author' => [
@@ -16,13 +16,13 @@ return [
     '__dependencies' => [
         'required' => [
             [
-                'lib-model' => NULL
+                'lib-model' => null
             ],
             [
-                'cli' => NULL
+                'cli' => null
             ],
             [
-                'lib-curl' => NULL
+                'lib-curl' => null
             ]
         ],
         'optional' => []
@@ -103,6 +103,16 @@ return [
                     ]
                 ],
                 'handler' => 'LibWorker\\Controller\\Worker::run'
+            ],
+            'libWorkerSleep' => [
+                'info' => 'Do nothing, just sleep for awhile',
+                'path' => [
+                    'value' => 'sleep (:second)',
+                    'params' => [
+                        'second' => 'number'
+                    ]
+                ],
+                'handler' => 'LibWorker\\Controller\\Worker::sleep'
             ]
         ]
     ],

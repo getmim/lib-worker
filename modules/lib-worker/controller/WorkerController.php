@@ -69,7 +69,8 @@ class WorkerController extends \Cli\Controller
             return false;
         }
 
-        $pwd = trim(preg_replace('!^[0-9]+: !', '', `lsof -a -p $pid -d cwd -n | tail -1 | awk '{print \$NF}'`));
+        $cmd = `lsof -a -p $pid -d cwd -n | tail -1 | awk '{print \$NF}'`;
+        $pwd = trim(preg_replace('!^[0-9]+: !', '', $cmd));
         return $pwd === BASEPATH;
     }
 
@@ -89,7 +90,7 @@ class WorkerController extends \Cli\Controller
     private function scanChildProcess(): void
     {
         foreach ($this->workers as $job => $res) {
-            $stat = proc_get_status($res);
+            $stat = proc_get_status($res->proc);
             if ($stat['running']) {
                 continue;
             }
@@ -219,7 +220,10 @@ class WorkerController extends \Cli\Controller
                 break;
             }
 
-            $jobs = WJob::get(['time' => ['__op', '<', date('Y-m-d H:i:s')]], 25);
+            $cond = [
+                'time' => ['__op', '<', date('Y-m-d H:i:s')]
+            ];
+            $jobs = WJob::get($cond, 25);
 
             // sleep more
             if ($jobs) {
@@ -241,6 +245,15 @@ class WorkerController extends \Cli\Controller
                         sleep(1);
                     }
 
+                    // find if task with this queue is on working
+                    if ($job->queue) {
+                        foreach ($this->workers as $work) {
+                            if ($work->job->queue == $job->queue) {
+                                continue 2;
+                            }
+                        }
+                    }
+
                     $cmd = $php_binary . ' index.php worker run ' . $job->id;
                     $worker_desc = [
                         ['pipe', 'r'],
@@ -248,14 +261,17 @@ class WorkerController extends \Cli\Controller
                         ['file', '/tmp/mim-worker-error-' . $job->id . '.txt', 'a']
                     ];
 
-                    $this->workers[$job->id] = proc_open($cmd, $worker_desc, $pipes, BASEPATH);
+                    $this->workers[$job->id] = (object)[
+                        'proc' => proc_open($cmd, $worker_desc, $pipes, BASEPATH),
+                        'job'  => $job
+                    ];
                     Bash::echo(date('Y-m-d H:i:s') . ' | ' .$cmd);
                     Bash::echo(date('Y-m-d H:i:s') . ' | Running Job ' . $job->id);
                 }
             }
 
             $this->scanChildProcess();
-            sleep(2);
+            sleep(1);
 
             Bash::echo(date('Y-m-d H:i:s') . ' | Next Loop');
         }
@@ -291,5 +307,13 @@ class WorkerController extends \Cli\Controller
         }
 
         Bash::echo('Stopped');
+    }
+
+    public function sleepAction()
+    {
+        $time = $this->req->param->second;
+        sleep($time);
+
+        Bash::json(['error' => false]);
     }
 }
