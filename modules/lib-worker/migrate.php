@@ -109,6 +109,11 @@ return [
                 'fields' => [
                     'time' => []
                 ]
+            ],
+            'by_name' => [
+                'fields' => [
+                    'name' => []
+                ]
             ]
         ]
     ]
