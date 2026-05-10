@@ -4,7 +4,7 @@ return [
     'LibWorker\\Model\\WorkerResult' => [
         'fields' => [
             'id' => [
-                'type' => 'INT',
+                'type' => 'BIGINT',
                 'attrs' => [
                     'unsigned' => true,
                     'primary_key' => true,
@@ -53,7 +53,7 @@ return [
     'LibWorker\\Model\\WorkerJob' => [
         'fields' => [
             'id' => [
-                'type' => 'INT',
+                'type' => 'BIGINT',
                 'attrs' => [
                     'unsigned' => true,
                     'primary_key' => true,
